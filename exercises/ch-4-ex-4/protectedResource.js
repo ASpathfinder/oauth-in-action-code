@@ -74,10 +74,18 @@ app.get('/favorites', getAccessToken, requireAccessToken, function(req, res) {
 	/*
 	 * Get different user information based on the information of who approved the token
 	 */
-	
 	var unknown = {user: 'Unknown', favorites: {movies: [], foods: [], music: []}};
+	if(req.access_token.user) {
+		unknown.user = req.access_token.user;
+		let scope = req.access_token.scope;
+		for (let i = 0; i < scope.length; i++) {
+			if (req.access_token.user === 'alice')
+				unknown.favorites[scope[i]] = aliceFavorites[scope[i]];
+			else if (req.access_token.user === 'bob')
+				unknown.favorites[scope[i]] = bobFavorites[scope[i]];
+		}
+	}
 	res.json(unknown);
-
 });
 
 var server = app.listen(9002, 'localhost', function () {
