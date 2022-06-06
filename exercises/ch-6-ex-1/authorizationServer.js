@@ -121,14 +121,33 @@ app.post('/approve', function(req, res) {
 			});
 			res.redirect(urlParsed);
 			return;
+		} else if (query.response_type == 'token') {
 		
+			var rscope = getScopesFromForm(req.body);
+			var client = getClient(query.client_id);
+			var cscope = client.scope ? client.scope.split(' ') : undefined;
+			if (__.difference(rscope, cscope).length > 0) {
+				var urlParsed = buildUrl(query.redirect_uri,
+					{},
+					qs.stringify({error: 'invalid_scope'})
+				);
+				res.redirect(urlParsed);
+				return;
+			}
+			var access_token = randomstring.generate();
+			nosql.insert({ access_token: access_token, client_id: client.client_id, scope: rscope });
+
+			var token_response = { access_token: access_token, token_type: 'Bearer', scope: rscope.join(' ') };
+			if (query.state) {
+				token_response.state = query.state;
+			}
 		
-		/*
-		 * Implement response_type=token here
-	 	 */
-		
-		
-		
+			var urlParsed = buildUrl(query.redirect_uri,
+				{},
+				qs.stringify(token_response)
+			);
+			res.redirect(urlParsed);
+			return;
 		} else {
 			// we got a response type we don't understand
 			var urlParsed = buildUrl(query.redirect_uri, {
@@ -137,6 +156,7 @@ app.post('/approve', function(req, res) {
 			res.redirect(urlParsed);
 			return;
 		}
+		
 	} else {
 		// user denied access
 		var urlParsed = buildUrl(query.redirect_uri, {
